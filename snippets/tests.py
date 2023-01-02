@@ -1,23 +1,34 @@
-from django.http import HttpRequest
-from django.test import TestCase
-from django.urls import resolve
+from django.contrib.auth import get_user_model  # get_user_modelをインポート
+from django.test import TestCase, Client, RequestFactory  # RequestFactoryをインポート
 
-from snippets.views import top, snippet_new, snippet_edit, snippet_detail
+from snippets.models import Snippet
+from snippets.views import top
 
-
-class CreateSnippetTest(TestCase):
-    def test_should_resolve_snippet_new(self):
-        found = resolve("/snippets/new/")
-        self.assertEqual(snippet_new, found.func)
+UserModel = get_user_model()
 
 
-class SnippetDetailTest(TestCase):
-    def test_should_resolve_snippet_detail(self):
-        found = resolve("/snippets/1/")
-        self.assertEqual(snippet_detail, found.func)
+class TopPageRenderSnippetsTest(TestCase):
+    def setUp(self):
+        self.user = UserModel.objects.create(
+            username="test_user",
+            email="test@example.com",
+            password="top_secret_pass0001",
+        )
+        self.snippet = Snippet.objects.create(
+            title="title1",
+            code="print('hello')",
+            description="description1",
+            created_by=self.user,
+        )
 
+    def test_should_return_snippet_title(self):
+        request = RequestFactory().get("/")
+        request.user = self.user
+        response = top(request)
+        self.assertContains(response, self.snippet.title)
 
-class EditSnippetTest(TestCase):
-    def test_should_resolve_snippet_edit(self):
-        found = resolve("/snippets/1/edit/")
-        self.assertEqual(snippet_edit, found.func)
+    def test_should_return_username(self):
+        request = RequestFactory().get("/")
+        request.user = self.user
+        response = top(request)
+        self.assertContains(response, self.user.username)
